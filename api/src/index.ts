@@ -8,7 +8,7 @@ const server = fastify();
 server.register(testRoutes, { prefix: '/api/' })
 
 const run =  () => {
-    server.listen({ port: Number(process.env.SERVER_PORT ?? 3001) },  (err, address) => {
+    server.listen({ port: Number(process.env.SERVER_PORT ?? 3001), host: '0.0.0.0' },  (err, address) => {
         if (err) {
             console.error(err)
             process.exit(1)

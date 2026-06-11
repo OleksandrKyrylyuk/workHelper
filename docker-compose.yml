@@ -1,0 +1,54 @@
+services:
+  web:
+    build:
+      context: ./web
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./web:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      - WATCHPACK_POLLING=true
+      - CHOKIDAR_USEPOLLING=true
+    depends_on:
+      - api
+    networks:
+      - workhelper
+
+  api:
+    build:
+      context: ./api
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./api:/app
+      - /app/node_modules
+    environment:
+      - SERVER_PORT=3001
+      - DATABASE_URL=postgresql://user:password@postgres:5432/workhelper
+    depends_on:
+      - postgres
+    networks:
+      - workhelper
+
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: workhelper
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - workhelper
+
+volumes:
+  postgres_data:
+
+networks:
+  workhelper:
+    driver: bridge
+
