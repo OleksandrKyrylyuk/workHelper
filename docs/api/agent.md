@@ -1,0 +1,38 @@
+# API Agent Instructions (Fastify)
+
+Apply these rules when editing files under `api/`.
+
+## Structure and Routing
+
+- Keep route registration in `api/src/routes/`.
+- Keep request handlers/controllers in `api/src/controllers/`.
+- Keep startup/bootstrap concerns in `api/src/index.ts`.
+- Prefer one responsibility per module.
+
+## Handler Design
+
+- Validate and narrow inputs at the edge (params, query, body).
+- Return stable JSON response shapes for API endpoints.
+- Do not send raw error objects to clients.
+- Use appropriate HTTP status codes and consistent error messages.
+
+## Fastify Practices
+
+- ALWAYS Fastify patterns over ad-hoc abstractions.
+- Keep route plugins async and typed. 
+- Register plugins/routes with explicit prefixes.
+- Keep controller logic framework-light when possible for easier testing.
+
+## Runtime and Config
+
+- Read environment variables once and validate required keys on startup.
+- Do not hardcode secrets or deployment-specific values.
+- Keep defaults safe for local development.
+
+## API Quality Gate
+
+Run from `api/` when code changes are made:
+
+- `npm run build`
+- `npm run dev` (smoke test endpoint behavior)
+
