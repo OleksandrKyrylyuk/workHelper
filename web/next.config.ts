@@ -3,7 +3,6 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
     output: "standalone",
     webpack(config, { dev }) {
-        console.log(dev)
         if (dev) {
             config.watchOptions = {
                 poll: 1000,
