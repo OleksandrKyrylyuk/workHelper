@@ -7,6 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Progress } from "@/components/ui/progress"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { cn } from "@/lib/utils"
+import { uploadFiles } from "@/lib/api/services/files.service"
+import { ApiError } from "@/lib/api/client"
 
 export default function UploadPage() {
   const [files, setFiles] = React.useState<File[]>([])
@@ -76,41 +78,31 @@ export default function UploadPage() {
     setProgress(0)
     setMessage(null)
 
-    const formData = new FormData()
-    files.forEach((file, index) => {
-      formData.append(`file${index}`, file)
-    })
-
     try {
       setProgress(30)
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
-      const response = await fetch(`${apiUrl}/files/upload`, {
-        method: "POST",
-        body: formData,
-      })
-
-      setProgress(70)
-      const data = await response.json()
-
+      
+      // Using the files service
+      const data = await uploadFiles(files)
+      
       setProgress(100)
-
-      if (response.ok) {
-        setMessage({ type: "success", text: data.message || "Files uploaded successfully" })
-        setFiles([])
-        if (fileInputRef.current) {
-          fileInputRef.current.value = ""
-        }
+      setMessage({ type: "success", text: data.message || "Files uploaded successfully" })
+      setFiles([])
+      
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ""
+      }
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setMessage({
+          type: "error",
+          text: error.message
+        })
       } else {
         setMessage({
           type: "error",
-          text: data.message || data.error || "Failed to upload files"
+          text: error instanceof Error ? error.message : "Failed to upload files"
         })
       }
-    } catch (error) {
-      setMessage({
-        type: "error",
-        text: error instanceof Error ? error.message : "Failed to upload files"
-      })
     } finally {
       setUploading(false)
       setTimeout(() => setProgress(0), 1000)
