@@ -34,10 +34,19 @@ Use these standards for all changes in this repository.
 - Prefer existing dependencies already used by the project.
 - Do not add new packages unless required and justified.
 - Update package manifests and lockfiles whenever dependencies change.
+- When adding UI components in `web/`, use the shadcn CLI (`npx shadcn@latest add <component>`) rather than installing raw packages manually.
+
+## UI Standards (web/ only)
+
+- Use **shadcn/ui** components as the primary building block for all UI.
+- Use **Tailwind CSS** utilities for all styling — no inline styles, no custom CSS files unless essential.
+- Use the `cn()` helper from `@/lib/utils` to merge conditional class names.
+- Use design tokens (`bg-background`, `text-foreground`, etc.) — never hardcode colors.
+- Follow mobile-first responsive design with Tailwind breakpoint prefixes.
+- See `docs/web/agent.md` for full UI rules.
 
 ## Validation Checklist Before Finishing
 
 - Project scripts relevant to the change pass (lint/build/test where applicable).
 - New behavior is covered by tests or documented if tests are unavailable.
 - No unrelated file churn.
-

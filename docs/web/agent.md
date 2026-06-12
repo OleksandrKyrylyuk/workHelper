@@ -2,6 +2,16 @@
 
 Apply these rules when editing files under `web/`.
 
+## Instruction Files
+
+When working on the web app, read the relevant guide(s) below in addition to this file:
+
+| File | When to read |
+|---|---|
+| `docs/web/tailwind.md` | Any styling or layout change |
+| `docs/web/shadcn.md` | Adding or using UI components |
+| `docs/web/components.md` | Writing or modifying React components |
+
 ## Mandatory Framework Rule
 
 This project uses a Next.js version with breaking changes.
@@ -23,11 +33,24 @@ This project uses a Next.js version with breaking changes.
 - Keep secrets server-side only; never expose env vars to clients unless intentionally public.
 - Avoid client-side data fetching for secure or privileged operations when server alternatives exist.
 
-## Styling and UI
+## File and Folder Conventions
 
-- Follow existing Tailwind usage and utility composition patterns.
-- Reuse existing UI building blocks in `web/components/ui/` before creating new primitives.
-- Keep accessibility in mind (semantic HTML, labels, keyboard interactions).
+| Path | Purpose |
+|---|---|
+| `web/app/` | Pages, layouts, route segments |
+| `web/components/ui/` | Raw shadcn primitives (CLI-managed, do not edit manually) |
+| `web/components/` | Feature and composed components |
+| `web/lib/utils.ts` | `cn()` and other framework-agnostic utilities |
+| `web/hooks/` | Custom React hooks |
+
+## Aliases (from `components.json`)
+
+| Alias | Resolves to |
+|---|---|
+| `@/components` | `web/components/` |
+| `@/components/ui` | `web/components/ui/` |
+| `@/lib` | `web/lib/` |
+| `@/hooks` | `web/hooks/` |
 
 ## Web Quality Gate
 
@@ -35,4 +58,3 @@ Run from `web/` when code changes are made:
 
 - `npm run lint`
 - `npm run build`
-
