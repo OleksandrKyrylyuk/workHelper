@@ -2,6 +2,9 @@ services:
   web:
     build:
       context: ./web
+      dockerfile: Dockerfile
+    command: npm run dev
+    restart: unless-stopped
     ports:
       - "3000:3000"
     volumes:
@@ -51,4 +54,3 @@ volumes:
 networks:
   workhelper:
     driver: bridge
-
