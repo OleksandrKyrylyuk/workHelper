@@ -1,10 +1,17 @@
 import fastify from 'fastify'
 import "dotenv/config";
+import cors from '@fastify/cors';
 import multipart from '@fastify/multipart';
 import { fileRoutes } from './routes/file.routes.js';
 import { ensureUploadDir } from './utils/file.utils.js';
 
 const server = fastify();
+
+// Enable CORS for web app
+server.register(cors, {
+    origin: process.env.CORS_ORIGIN || true,
+    methods: ['GET', 'POST', 'DELETE']
+});
 
 // Register multipart for file uploads
 server.register(multipart, {

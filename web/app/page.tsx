@@ -1,7 +1,12 @@
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <h1>My test12</h1>
+    <div className="flex flex-col flex-1 items-center justify-center">
+      <h1 className="text-4xl font-bold text-foreground">
+        Welcome to Work Helper
+      </h1>
+      <p className="mt-4 text-lg text-muted-foreground">
+        Your intelligent work assistant
+      </p>
     </div>
   );
 }
