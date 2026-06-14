@@ -4,11 +4,10 @@ import * as React from "react"
 import { Upload as UploadIcon, X, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Progress } from "@/components/ui/progress"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { cn } from "@/lib/utils"
 import { uploadFiles } from "@/lib/api/services/files.service"
 import { ApiError } from "@/lib/api/client"
+import { PageHeader, UploadProgress, FileListHeader, UploadAlert } from "@/components/upload"
 
 export default function UploadPage() {
   const [files, setFiles] = React.useState<File[]>([])
@@ -111,12 +110,10 @@ export default function UploadPage() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Upload Files</h1>
-        <p className="mt-2 text-muted-foreground">
-          Upload your documents for processing. Max 10MB per file, 10 files max.
-        </p>
-      </div>
+      <PageHeader
+        title="Upload Files"
+        description="Upload your documents for processing. Max 10MB per file, 10 files max."
+      />
 
       <Card>
         <CardHeader>
@@ -157,7 +154,10 @@ export default function UploadPage() {
 
           {files.length > 0 && (
             <div className="space-y-2">
-              <h3 className="text-sm font-medium text-foreground">Selected Files ({files.length}/10)</h3>
+              <FileListHeader
+                fileCount={files.length}
+                className="text-sm font-medium text-foreground"
+              />
               <div className="space-y-2">
                 {files.map((file, index) => (
                   <div
@@ -193,20 +193,11 @@ export default function UploadPage() {
           )}
 
           {uploading && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Uploading...</span>
-                <span className="text-foreground font-medium">{progress}%</span>
-              </div>
-              <Progress value={progress} />
-            </div>
+            <UploadProgress progress={progress} className="space-y-2" />
           )}
 
           {message && (
-            <Alert variant={message.type === "error" ? "destructive" : "default"}>
-              <AlertTitle>{message.type === "error" ? "Error" : "Success"}</AlertTitle>
-              <AlertDescription>{message.text}</AlertDescription>
-            </Alert>
+            <UploadAlert type={message.type} message={message.text} />
           )}
 
           <div className="flex gap-2">
@@ -239,5 +230,3 @@ export default function UploadPage() {
     </div>
   )
 }
-
-
