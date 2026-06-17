@@ -3,7 +3,6 @@ import "dotenv/config";
 import cors from '@fastify/cors';
 import multipart from '@fastify/multipart';
 import { fileRoutes } from './routes/file.routes.js';
-import { ensureUploadDir } from './utils/file.utils.js';
 
 const server = fastify();
 
@@ -20,9 +19,6 @@ server.register(multipart, {
         files: 10 // Max 10 files per request
     }
 });
-
-// Ensure upload directory exists
-await ensureUploadDir();
 
 // Register routes
 server.register(fileRoutes, { prefix: '/files' })
