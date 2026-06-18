@@ -5,17 +5,20 @@ import { usePathname } from "next/navigation"
 import { Home, Upload, MessageSquare } from "lucide-react"
 import { cn } from "@/lib/utils"
 
+type UserRole = 'admin' | 'user' | 'guest'
+
 const navItems = [
-  { title: "Home", href: "/", icon: Home, roles: ['admin', 'user'] as const },
-  { title: "Chat", href: "/chat", icon: MessageSquare, roles: ['admin', 'user'] as const },
-  { title: "Upload", href: "/upload", icon: Upload, roles: ['admin'] as const },
+  { title: "Home", href: "/", icon: Home, roles: ['admin', 'user', 'guest'] as UserRole[] },
+  { title: "Chat", href: "/chat", icon: MessageSquare, roles: ['admin', 'user', 'guest'] as UserRole[] },
+  { title: "Upload", href: "/upload", icon: Upload, roles: ['admin'] as UserRole[] },
 ]
 
 export function Sidebar({ role }: { role?: 'admin' | 'user' }) {
   const pathname = usePathname()
 
-  const visibleItems = navItems.filter(
-    (item) => !role || (item.roles as readonly string[]).includes(role)
+  const effectiveRole: UserRole = role || 'guest'
+  const visibleItems = navItems.filter((item) =>
+    item.roles.includes(effectiveRole)
   )
 
   return (
