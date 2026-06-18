@@ -29,6 +29,13 @@ Apply these rules when editing files under `api/`.
 - Do not hardcode secrets or deployment-specific values.
 - Keep defaults safe for local development.
 
+## Feature-Specific Guides
+
+| Feature | Guide |
+|---|---|
+| File upload (S3 + multipart) | `docs/api/s3-file-upload.md` |
+| RAG pipeline (ingestion + embeddings + Qdrant) | `docs/api/rag.md` |
+
 ## API Quality Gate
 
 Run from `api/` when code changes are made:
