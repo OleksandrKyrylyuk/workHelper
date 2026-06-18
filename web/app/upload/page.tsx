@@ -45,7 +45,7 @@ export default function UploadPage() {
   const addFiles = (newFiles: File[]) => {
     setMessage(null)
     const validFiles = newFiles.filter(file => {
-      if (file.size > 10 * 1024 * 1024) {
+      if (file.size > 50 * 1024 * 1024) {
         setMessage({ type: "error", text: `File ${file.name} is too large. Maximum size is 10MB.` })
         return false
       }
