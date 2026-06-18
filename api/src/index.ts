@@ -3,13 +3,14 @@ import "dotenv/config";
 import cors from '@fastify/cors';
 import multipart from '@fastify/multipart';
 import { fileRoutes } from './routes/file.routes.js';
+import { chatRoutes } from './routes/chat.routes.js';
 import { createIngestionWorker } from './queues/ingestion.worker.js';
 
 const server = fastify();
 
 // Enable CORS for web app
 server.register(cors, {
-    origin: process.env.CORS_ORIGIN || true,
+    origin: process.env.CORS_ORIGIN || '*',
     methods: ['GET', 'POST', 'DELETE']
 });
 
@@ -23,6 +24,7 @@ server.register(multipart, {
 
 // Register routes
 server.register(fileRoutes, { prefix: '/files' })
+server.register(chatRoutes, { prefix: '/chat' })
 
 const run =  () => {
     // Start the BullMQ ingestion worker

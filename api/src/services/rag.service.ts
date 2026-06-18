@@ -22,6 +22,34 @@ async function ensureCollection(): Promise<void> {
     }
 }
 
+export interface RetrievedChunk {
+    text: string;
+    documentId: string;
+    chunkIndex: number;
+}
+
+export async function queryDocuments(query: string, topK: number): Promise<RetrievedChunk[]> {
+    const embedder = new OpenAIEmbedding({
+        model: EMBEDDING_MODEL,
+        apiKey: process.env.OPENAI_API_KEY,
+    });
+
+    const queryVector = await embedder.getTextEmbedding(query);
+
+    const results = await qdrant.search(COLLECTION_NAME, {
+        vector: queryVector,
+        limit: topK,
+    });
+
+    return results
+        .filter((r) => r.payload)
+        .map((r) => ({
+            text: r.payload!['text'] as string,
+            documentId: r.payload!['documentId'] as string,
+            chunkIndex: r.payload!['chunkIndex'] as number,
+        }));
+}
+
 export async function indexDocument(documentId: string, text: string): Promise<void> {
     await ensureCollection();
 
