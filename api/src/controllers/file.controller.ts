@@ -4,9 +4,12 @@ import { PassThrough } from "stream";
 import { DeleteObjectsCommand } from "@aws-sdk/client-s3";
 import { Upload } from "@aws-sdk/lib-storage";
 import s3 from "../../config/s3.config.js";
+import { db } from "../db/index.js";
+import { documents } from "../db/schema.js";
+import { ingestionQueue } from "../queues/ingestion.queue.js";
 
 export async function uploadFiles(req: FastifyRequest, res: FastifyReply) {
-    const uploadedFiles: { originalName: string; key: string; contentType: string; size: number }[] = [];
+    const uploadedFiles: { originalName: string; key: string; contentType: string; size: number; documentId: string }[] = [];
 
     const files = req.files();
 
@@ -32,7 +35,28 @@ export async function uploadFiles(req: FastifyRequest, res: FastifyReply) {
 
             await upload.done();
 
-            uploadedFiles.push({ originalName: file.filename, key: fileKey, contentType: file.mimetype, size });
+            // Save document metadata
+            const [doc] = await db.insert(documents).values({
+                filename: file.filename,
+                s3Key: fileKey,
+                mimeType: file.mimetype,
+                status: 'uploaded',
+            }).returning();
+
+            // Enqueue ingestion job
+            await ingestionQueue.add('ingest', {
+                documentId: doc.id,
+                s3Key: fileKey,
+                mimeType: file.mimetype,
+            });
+
+            uploadedFiles.push({
+                originalName: file.filename,
+                key: fileKey,
+                contentType: file.mimetype,
+                size,
+                documentId: doc.id,
+            });
         }
     } catch (err) {
         if (uploadedFiles.length > 0) {

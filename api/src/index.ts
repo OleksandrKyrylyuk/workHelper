@@ -3,6 +3,7 @@ import "dotenv/config";
 import cors from '@fastify/cors';
 import multipart from '@fastify/multipart';
 import { fileRoutes } from './routes/file.routes.js';
+import { createIngestionWorker } from './queues/ingestion.worker.js';
 
 const server = fastify();
 
@@ -24,6 +25,9 @@ server.register(multipart, {
 server.register(fileRoutes, { prefix: '/files' })
 
 const run =  () => {
+    // Start the BullMQ ingestion worker
+    createIngestionWorker();
+
     server.listen({ port: Number(process.env.SERVER_PORT ?? 3001), host: '0.0.0.0' },  (err, address) => {
         if (err) {
             console.error(err)
