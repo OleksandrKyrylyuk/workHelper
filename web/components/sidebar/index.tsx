@@ -9,7 +9,7 @@ type UserRole = 'admin' | 'user' | 'guest'
 
 const navItems = [
   { title: "Home", href: "/", icon: Home, roles: ['admin', 'user', 'guest'] as UserRole[] },
-  { title: "Chat", href: "/chat", icon: MessageSquare, roles: ['admin', 'user', 'guest'] as UserRole[] },
+  { title: "Chat", href: "/chat", icon: MessageSquare, roles: ['admin', 'user'] as UserRole[] },
   { title: "Upload", href: "/upload", icon: Upload, roles: ['admin'] as UserRole[] },
 ]
 

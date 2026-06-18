@@ -26,6 +26,7 @@
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
     "fastify": "^5.8.5",
+    "fastify-plugin": "^6.0.0",
     "ioredis": "^5.11.1",
     "llamaindex": "^0.12.1",
     "mammoth": "^1.12.0",

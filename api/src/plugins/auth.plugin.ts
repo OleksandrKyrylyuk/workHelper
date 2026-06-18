@@ -1,12 +1,15 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import fjwt from '@fastify/jwt'
+import fp from 'fastify-plugin'
 
-export async function authPlugin(fastify: FastifyInstance): Promise<void> {
+async function authPluginCore(fastify: FastifyInstance): Promise<void> {
   fastify.register(fjwt, {
     secret: process.env.AUTH_SECRET!,
     verify: { algorithms: ['HS256'] },
   })
 }
+
+export const authPlugin = fp(authPluginCore)
 
 export async function requireAuth(
   request: FastifyRequest,
@@ -14,7 +17,8 @@ export async function requireAuth(
 ): Promise<void> {
   try {
     await request.jwtVerify()
-  } catch {
+  } catch (err) {
+    console.log('JWT verification error:', err)
     reply.status(401).send({ error: 'Unauthorized' })
   }
 }
