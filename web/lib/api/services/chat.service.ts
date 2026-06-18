@@ -1,5 +1,7 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
+import { getAuthToken } from '@/lib/api/client'
+
 export interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
@@ -14,9 +16,13 @@ export async function streamChat(
 ): Promise<void> {
   let response: Response
   try {
+    const token = await getAuthToken()
     response = await fetch(`${API_BASE_URL}/chat`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
       body: JSON.stringify({ message, history }),
     })
   } catch (err) {

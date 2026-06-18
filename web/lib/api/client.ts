@@ -2,6 +2,26 @@
  * Base API configuration and utilities
  */
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
+
+// Short-lived in-memory token cache (5 minutes)
+let tokenCache: { value: string; expiresAt: number } | null = null
+
+async function getAuthToken(): Promise<string | null> {
+  if (tokenCache && Date.now() < tokenCache.expiresAt) {
+    return tokenCache.value
+  }
+  try {
+    const res = await fetch('/api/auth/token')
+    if (!res.ok) return null
+    const { token } = (await res.json()) as { token?: string }
+    if (!token) return null
+    tokenCache = { value: token, expiresAt: Date.now() + 5 * 60 * 1000 }
+    return token
+  } catch {
+    return null
+  }
+}
+
 export interface ApiResponse<T = unknown> {
   data?: T
   message?: string
@@ -25,11 +45,13 @@ async function apiFetch<T = unknown>(
   options: RequestInit = {}
 ): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`
+  const token = await getAuthToken()
   try {
     const response = await fetch(url, {
       ...options,
       headers: {
         ...options.headers,
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
     })
     const data = await response.json()
@@ -120,12 +142,16 @@ export async function apiUpload<T = unknown>(
   options: RequestInit = {}
 ): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`
+  const token = await getAuthToken()
   try {
     const response = await fetch(url, {
       ...options,
       method: "POST",
       body: formData,
-      // Don't set Content-Type header - browser will set it with boundary
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        // Don't set Content-Type header - browser will set it with boundary
+      },
     })
     const data = await response.json()
     if (!response.ok) {
@@ -146,4 +172,4 @@ export async function apiUpload<T = unknown>(
     throw new ApiError(0, "Upload failed")
   }
 }
-export { API_BASE_URL }
+export { API_BASE_URL, getAuthToken }

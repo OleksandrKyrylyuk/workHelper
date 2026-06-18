@@ -15,8 +15,10 @@ services:
       - WATCHPACK_POLLING=true
       - CHOKIDAR_USEPOLLING=true
       - NEXT_PUBLIC_API_URL=http://localhost:3001
+      - DATABASE_URL=postgresql://user:password@postgres:5432/workhelper
     depends_on:
       - api
+      - postgres
     networks:
       - workhelper
 

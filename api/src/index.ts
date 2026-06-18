@@ -5,6 +5,7 @@ import multipart from '@fastify/multipart';
 import { fileRoutes } from './routes/file.routes.js';
 import { chatRoutes } from './routes/chat.routes.js';
 import { createIngestionWorker } from './queues/ingestion.worker.js';
+import { authPlugin } from './plugins/auth.plugin.js';
 
 const server = fastify();
 
@@ -21,6 +22,9 @@ server.register(multipart, {
         files: 10 // Max 10 files per request
     }
 });
+
+// Register auth plugin before routes
+server.register(authPlugin)
 
 // Register routes
 server.register(fileRoutes, { prefix: '/files' })

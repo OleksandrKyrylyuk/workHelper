@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/theme";
 import { Header } from "@/components/header";
 import { Sidebar } from "@/components/sidebar";
+import { auth } from "@/lib/auth";
 
 const inter = Inter({subsets:['latin'],variable:'--font-sans'});
 
@@ -23,11 +24,13 @@ export const metadata: Metadata = {
   description: "Your work assistant application",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const session = await auth();
+
   return (
     <html
       lang="en"
@@ -43,7 +46,7 @@ export default function RootLayout({
         >
           <Header />
           <div className="flex flex-1">
-            <Sidebar />
+            <Sidebar role={session?.user?.role} />
             <main className="flex-1 ml-64 p-6 overflow-auto">
               {children}
             </main>
