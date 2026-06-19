@@ -28,6 +28,15 @@ Use these standards for all changes in this repository.
 - Fail fast with actionable errors.
 - Never leak secrets or sensitive env values in logs or responses.
 - Return structured, consistent errors at API boundaries.
+- Use typed result objects for actions: `{ success: boolean; error?: string }`.
+
+## Authentication and Authorization
+
+- **Web**: Use JWT-based session auth via `@/lib/auth`. Session stored in HTTP-only cookie.
+- **API**: Use `@fastify/jwt` for token verification; see `api/src/plugins/auth.plugin.ts`.
+- **RBAC**: Support `admin` and `user` roles; enforce with guard functions (e.g., `requireAdmin()`).
+- Check session/role at the edge (server actions, API routes) before performing privileged operations.
+- Never expose sensitive user data to unauthorized roles.
 
 ## Dependencies and Tooling
 
@@ -35,6 +44,14 @@ Use these standards for all changes in this repository.
 - Do not add new packages unless required and justified.
 - Update package manifests and lockfiles whenever dependencies change.
 - When adding UI components in `web/`, use the shadcn CLI (`npx shadcn@latest add <component>`) rather than installing raw packages manually.
+
+## Database and Data Persistence
+
+- Use **Drizzle ORM** for schema definitions and type-safe queries.
+- Database schemas live in `web/lib/auth/schema.ts` (web) or relevant API schema files.
+- Use `pool.query()` for direct SQL when ORM is unnecessary or verbose.
+- **Soft delete pattern**: Add `deleted_at` timestamp column instead of hard deletes; filter by `WHERE deleted_at IS NULL`.
+- Run migrations via `drizzle-kit` when schema changes occur.
 
 ## UI Standards (web/ only)
 
