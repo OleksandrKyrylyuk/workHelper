@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Home, Upload, MessageSquare } from "lucide-react"
+import { Home, Upload, MessageSquare, Settings } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 type UserRole = 'admin' | 'user' | 'guest'
@@ -10,6 +10,7 @@ type UserRole = 'admin' | 'user' | 'guest'
 const navItems = [
   { title: "Home", href: "/", icon: Home, roles: ['admin', 'user', 'guest'] as UserRole[] },
   { title: "Chat", href: "/chat", icon: MessageSquare, roles: ['admin', 'user'] as UserRole[] },
+  { title: "Settings", href: "/settings", icon: Settings, roles: ['admin'] as UserRole[] },
   { title: "Upload", href: "/upload", icon: Upload, roles: ['admin'] as UserRole[] },
 ]
 
