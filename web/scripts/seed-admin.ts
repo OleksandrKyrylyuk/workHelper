@@ -6,8 +6,8 @@ import { eq } from 'drizzle-orm'
 import bcrypt from 'bcryptjs'
 import * as schema from '../lib/auth/schema'
 
-const ADMIN_EMAIL = 'admin@workhelper.com'
-const ADMIN_PASSWORD = 'Admin1234!'
+const ADMIN_EMAIL = String(process.env.ADMIN_LOGIN)
+const ADMIN_PASSWORD = String(process.env.ADMIN_PASSWORD)
 
 async function main() {
   const pool = new Pool({ connectionString: process.env.DATABASE_URL! })
@@ -43,7 +43,6 @@ async function main() {
     role: 'admin',
   })
 
-  console.log(`✓ Admin user created: ${ADMIN_EMAIL} / ${ADMIN_PASSWORD}`)
   await pool.end()
 }
 
