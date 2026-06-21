@@ -1,17 +1,19 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { randomUUID } from "crypto";
 import { PassThrough } from "stream";
-import { DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { Upload } from "@aws-sdk/lib-storage";
 import s3 from "../../config/s3.config.js";
 import { db } from "../db/index.js";
 import { audioFiles } from "../db/schema.js";
+import { eq } from "drizzle-orm";
+import { transcriptionQueue } from "../queues/transcription.queue.js";
 
 export async function uploadAudio(req: FastifyRequest, res: FastifyReply) {
     try {
-        // Extract user_id from JWT token
-        const user = req.user as { id?: string; userId?: string } | undefined;
-        const userId = user?.id || user?.userId || 'unknown';
+        // Extract user_id from JWT token (Bearer token uses `sub` claim)
+        const user = req.user as { sub?: string; id?: string; userId?: string } | undefined;
+        const userId = user?.sub || user?.id || user?.userId || 'unknown';
 
         const files = req.files();
         let fileProcessed = false;
@@ -64,6 +66,13 @@ export async function uploadAudio(req: FastifyRequest, res: FastifyReply) {
                     status: 'uploaded',
                 }).returning();
 
+                // Enqueue transcription job
+                await transcriptionQueue.add('transcribe', {
+                    audioId: audio.id,
+                    s3Key: fileKey,
+                    contentType: file.mimetype,
+                });
+
                 fileProcessed = true;
 
                 return res.send({
@@ -102,5 +111,128 @@ export async function uploadAudio(req: FastifyRequest, res: FastifyReply) {
     } catch (err) {
         req.log.error(err, "Audio upload error");
         return res.code(500).send({ error: "Upload failed. Please try again." });
+    }
+}
+
+export async function listAudios(req: FastifyRequest, res: FastifyReply) {
+    try {
+        const user = req.user as { sub?: string; id?: string; userId?: string } | undefined;
+        const userId = user?.sub || user?.id || user?.userId || 'unknown';
+
+        const records = await db.select({
+            id: audioFiles.id,
+            filename: audioFiles.filename,
+            size: audioFiles.size,
+            status: audioFiles.status,
+            contentType: audioFiles.contentType,
+            createdAt: audioFiles.createdAt,
+        })
+        .from(audioFiles)
+        .where(eq(audioFiles.userId, userId))
+        .orderBy(audioFiles.createdAt);
+
+        return res.send({ success: true, audios: records });
+    } catch (err) {
+        req.log.error(err, "Failed to list audio files");
+        return res.code(500).send({ error: "Failed to retrieve audio files." });
+    }
+}
+
+export async function deleteAudio(
+    req: FastifyRequest<{ Params: { id: string } }>,
+    res: FastifyReply
+) {
+    try {
+        const user = req.user as { sub?: string; id?: string; userId?: string } | undefined;
+        const userId = user?.sub || user?.id || user?.userId || 'unknown';
+        const { id } = req.params;
+
+        const [record] = await db.select()
+            .from(audioFiles)
+            .where(eq(audioFiles.id, id));
+
+        if (!record) {
+            return res.code(404).send({ error: "Audio file not found." });
+        }
+
+        if (record.userId !== userId) {
+            return res.code(403).send({ error: "Forbidden." });
+        }
+
+        // Delete audio file from S3
+        await s3.send(new DeleteObjectCommand({
+            Bucket: process.env.S3_BUCKET_NAME,
+            Key: record.s3Key,
+        })).catch(() => {
+            req.log.error({ key: record.s3Key }, "S3 delete failed during audio deletion");
+        });
+
+        // Delete transcription text from S3 if it exists
+        if (record.textS3Key) {
+            await s3.send(new DeleteObjectCommand({
+                Bucket: process.env.S3_BUCKET_NAME,
+                Key: record.textS3Key,
+            })).catch(() => {
+                req.log.error({ key: record.textS3Key }, "S3 delete failed for transcription text");
+            });
+        }
+
+        // Delete from database
+        await db.delete(audioFiles).where(eq(audioFiles.id, id));
+
+        return res.send({ success: true });
+    } catch (err) {
+        req.log.error(err, "Failed to delete audio file");
+        return res.code(500).send({ error: "Failed to delete audio file." });
+    }
+}
+
+export async function downloadAudioText(
+    req: FastifyRequest<{ Params: { id: string } }>,
+    res: FastifyReply
+) {
+    try {
+        const user = req.user as { sub?: string; id?: string; userId?: string } | undefined;
+        const userId = user?.sub || user?.id || user?.userId || 'unknown';
+        const { id } = req.params;
+
+        const [record] = await db.select()
+            .from(audioFiles)
+            .where(eq(audioFiles.id, id));
+
+        if (!record) {
+            return res.code(404).send({ error: "Audio file not found." });
+        }
+
+        if (record.userId !== userId) {
+            return res.code(403).send({ error: "Forbidden." });
+        }
+
+        if (record.status !== 'transcribed'|| !record.textS3Key) {
+            return res.code(400).send({ error: "Transcription is not available yet." });
+        }
+
+        const s3Response = await s3.send(new GetObjectCommand({
+            Bucket: process.env.S3_BUCKET_NAME,
+            Key: record.textS3Key,
+        }));
+
+        if (!s3Response.Body) {
+            return res.code(500).send({ error: "Transcription file not found in storage." });
+        }
+
+        const chunks: Uint8Array[] = [];
+        for await (const chunk of s3Response.Body as AsyncIterable<Uint8Array>) {
+            chunks.push(chunk);
+        }
+        const text = Buffer.concat(chunks).toString('utf-8');
+
+        const baseName = record.filename.replace(/\.[^.]+$/, '');
+        res.header('Content-Type', 'text/plain; charset=utf-8');
+        res.header('Content-Disposition', `attachment; filename="${baseName}.txt"`);
+        return res.send(text);
+    } catch (err) {
+        req.log.error(err, "Failed to download transcription text");
+        return res.code(500).send({ error: "Failed to download transcription text." });
     }
 }
