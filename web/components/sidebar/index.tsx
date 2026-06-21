@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Home, Upload, MessageSquare, Settings } from "lucide-react"
+import { Home, Upload, MessageSquare, Settings, Music } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 type UserRole = 'admin' | 'user' | 'guest'
@@ -10,6 +10,7 @@ type UserRole = 'admin' | 'user' | 'guest'
 const navItems = [
   { title: "Home", href: "/", icon: Home, roles: ['admin', 'user', 'guest'] as UserRole[] },
   { title: "Chat", href: "/chat", icon: MessageSquare, roles: ['admin', 'user'] as UserRole[] },
+  { title: "Audio", href: "/audio/upload", icon: Music, roles: ['admin'] as UserRole[] },
   { title: "Settings", href: "/settings", icon: Settings, roles: ['admin'] as UserRole[] },
   { title: "Upload", href: "/upload", icon: Upload, roles: ['admin'] as UserRole[] },
 ]
@@ -26,7 +27,7 @@ export function Sidebar({ role }: { role?: 'admin' | 'user' }) {
     <aside className="fixed left-0 top-14 z-40 h-[calc(100vh-3.5rem)] w-64 border-r border-border bg-background">
       <nav className="flex flex-col gap-1 p-4">
         {visibleItems.map((item) => {
-          const isActive = pathname === item.href
+          const isActive = pathname === item.href || (item.href !== '/' && pathname?.startsWith(item.href))
           const Icon = item.icon
           return (
             <Link

@@ -4,6 +4,7 @@ import cors from '@fastify/cors';
 import multipart from '@fastify/multipart';
 import { fileRoutes } from './routes/file.routes.js';
 import { chatRoutes } from './routes/chat.routes.js';
+import { audioRoutes } from './routes/audio.routes.js';
 import { createIngestionWorker } from './queues/ingestion.worker.js';
 import { authPlugin } from './plugins/auth.plugin.js';
 
@@ -18,7 +19,7 @@ server.register(cors, {
 // Register multipart for file uploads
 server.register(multipart, {
     limits: {
-        fileSize: 50 * 1024 * 1024, // 10MB max file size
+        fileSize: 100 * 1024 * 1024, // 100MB max file size
         files: 10 // Max 10 files per request
     }
 });
@@ -29,6 +30,7 @@ server.register(authPlugin)
 // Register routes
 server.register(fileRoutes, { prefix: '/files' })
 server.register(chatRoutes, { prefix: '/chat' })
+server.register(audioRoutes, { prefix: '/audio' })
 
 const run =  () => {
     // Start the BullMQ ingestion worker
