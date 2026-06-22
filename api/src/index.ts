@@ -7,6 +7,7 @@ import { chatRoutes } from './routes/chat.routes.js';
 import { audioRoutes } from './routes/audio.routes.js';
 import { createIngestionWorker } from './queues/ingestion.worker.js';
 import { createTranscriptionWorker } from './queues/transcription.worker.js';
+import { createAnalysisWorker } from './queues/analysis.worker.js';
 import { authPlugin } from './plugins/auth.plugin.js';
 
 const server = fastify();
@@ -39,6 +40,9 @@ const run =  () => {
 
     // Start the BullMQ transcription worker
     createTranscriptionWorker();
+
+    // Start the BullMQ analysis worker
+    createAnalysisWorker();
 
     server.listen({ port: Number(process.env.SERVER_PORT ?? 3001), host: '0.0.0.0' },  (err, address) => {
         if (err) {

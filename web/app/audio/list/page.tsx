@@ -6,7 +6,8 @@ import { AudioListTable, type AudioRow } from "@/components/audio-list-table"
 
 async function getAudios(userId: string): Promise<AudioRow[]> {
   const result = await pool.query<AudioRow>(
-    `SELECT id, filename, size, status, content_type AS "contentType", created_at AS "createdAt"
+    `SELECT id, filename, size, status, content_type AS "contentType", created_at AS "createdAt",
+            analysis_s3_key AS "analysisS3Key"
      FROM audio_files
      WHERE user_id = $1
      ORDER BY created_at DESC`,

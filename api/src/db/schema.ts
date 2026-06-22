@@ -21,8 +21,9 @@ export const audioFiles = pgTable('audio_files', {
     s3Key: text('s3_key').notNull(),
     contentType: text('content_type').notNull(),
     size: bigint('size', { mode: 'number' }).notNull(),
-    status: text('status').notNull().default('uploading'), // uploading | uploaded | transcribing | transcribed | failed
+    status: text('status').notNull().default('uploading'), // uploading | uploaded | transcribing | transcribed | analyzing | analyzed | failed
     textS3Key: text('text_s3_key'),
+    analysisS3Key: text('analysis_s3_key'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

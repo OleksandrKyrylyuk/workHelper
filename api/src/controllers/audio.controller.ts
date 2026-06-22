@@ -126,6 +126,7 @@ export async function listAudios(req: FastifyRequest, res: FastifyReply) {
             status: audioFiles.status,
             contentType: audioFiles.contentType,
             createdAt: audioFiles.createdAt,
+            analysisS3Key: audioFiles.analysisS3Key,
         })
         .from(audioFiles)
         .where(eq(audioFiles.userId, userId))
@@ -177,6 +178,16 @@ export async function deleteAudio(
             });
         }
 
+        // Delete analysis file from S3 if it exists
+        if (record.analysisS3Key) {
+            await s3.send(new DeleteObjectCommand({
+                Bucket: process.env.S3_BUCKET_NAME,
+                Key: record.analysisS3Key,
+            })).catch(() => {
+                req.log.error({ key: record.analysisS3Key }, "S3 delete failed for analysis file");
+            });
+        }
+
         // Delete from database
         await db.delete(audioFiles).where(eq(audioFiles.id, id));
 
@@ -208,7 +219,7 @@ export async function downloadAudioText(
             return res.code(403).send({ error: "Forbidden." });
         }
 
-        if (record.status !== 'transcribed'|| !record.textS3Key) {
+        if (!record.textS3Key) {
             return res.code(400).send({ error: "Transcription is not available yet." });
         }
 
@@ -234,5 +245,55 @@ export async function downloadAudioText(
     } catch (err) {
         req.log.error(err, "Failed to download transcription text");
         return res.code(500).send({ error: "Failed to download transcription text." });
+    }
+}
+
+export async function downloadAnalysis(
+    req: FastifyRequest<{ Params: { id: string } }>,
+    res: FastifyReply
+) {
+    try {
+        const user = req.user as { sub?: string; id?: string; userId?: string } | undefined;
+        const userId = user?.sub || user?.id || user?.userId || 'unknown';
+        const { id } = req.params;
+
+        const [record] = await db.select()
+            .from(audioFiles)
+            .where(eq(audioFiles.id, id));
+
+        if (!record) {
+            return res.code(404).send({ error: "Audio file not found." });
+        }
+
+        if (record.userId !== userId) {
+            return res.code(403).send({ error: "Forbidden." });
+        }
+
+        if (record.status !== 'analyzed' || !record.analysisS3Key) {
+            return res.code(400).send({ error: "Analysis is not available yet." });
+        }
+
+        const s3Response = await s3.send(new GetObjectCommand({
+            Bucket: process.env.S3_BUCKET_NAME,
+            Key: record.analysisS3Key,
+        }));
+
+        if (!s3Response.Body) {
+            return res.code(500).send({ error: "Analysis file not found in storage." });
+        }
+
+        const chunks: Uint8Array[] = [];
+        for await (const chunk of s3Response.Body as AsyncIterable<Uint8Array>) {
+            chunks.push(chunk);
+        }
+        const text = Buffer.concat(chunks).toString('utf-8');
+
+        const baseName = record.filename.replace(/\.[^.]+$/, '');
+        res.header('Content-Type', 'text/plain; charset=utf-8');
+        res.header('Content-Disposition', `attachment; filename="${baseName}-analysis.txt"`);
+        return res.send(text);
+    } catch (err) {
+        req.log.error(err, "Failed to download analysis file");
+        return res.code(500).send({ error: "Failed to download analysis file." });
     }
 }

@@ -13,6 +13,7 @@ import { db } from '../db/index.js';
 import { audioFiles } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import type { TranscriptionJobData } from './transcription.queue.js';
+import { analysisQueue } from './analysis.queue.js';
 
 const connection = { url: process.env.REDIS_URL || 'redis://localhost:6379' };
 const execFileAsync = promisify(execFile);
@@ -125,6 +126,13 @@ export function createTranscriptionWorker() {
 
                 await db.update(audioFiles)
                     .set({ status: 'transcribed', textS3Key: textKey, updatedAt: new Date() })
+                    .where(eq(audioFiles.id, audioId));
+
+                // Enqueue analysis job
+                await analysisQueue.add('analyze', { audioId, textS3Key: textKey });
+
+                await db.update(audioFiles)
+                    .set({ status: 'Analyzed', textS3Key: textKey, updatedAt: new Date() })
                     .where(eq(audioFiles.id, audioId));
             } catch (err) {
                 await db.update(audioFiles)

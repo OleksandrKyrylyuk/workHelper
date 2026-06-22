@@ -48,8 +48,30 @@ export async function deleteAudio(id: string): Promise<{ success: boolean }> {
 }
 
 /**
- * Download transcription text as a .txt file
+ * Download analysis file as a .txt file
  */
+export async function downloadAnalysis(id: string, filename: string): Promise<void> {
+  const token = await getAuthToken()
+  const response = await fetch(`${API_BASE_URL}/audio/${id}/download-analysis`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  })
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({})) as { error?: string }
+    throw new Error(data.error || "Failed to download analysis")
+  }
+
+  const text = await response.text()
+  const blob = new Blob([text], { type: "text/plain;charset=utf-8" })
+  const url = URL.createObjectURL(blob)
+
+  const anchor = document.createElement("a")
+  const baseName = filename.replace(/\.[^.]+$/, "")
+  anchor.href = url
+  anchor.download = `${baseName}-analysis.txt`
+  anchor.click()
+  URL.revokeObjectURL(url)
+}
 export async function downloadAudioText(id: string, filename: string): Promise<void> {
   const token = await getAuthToken()
   const response = await fetch(`${API_BASE_URL}/audio/${id}/download-text`, {

@@ -1,0 +1,1 @@
+ALTER TABLE "audio_files" ADD COLUMN "analysis_s3_key" text;
