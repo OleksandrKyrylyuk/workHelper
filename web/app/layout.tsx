@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/theme";
 import { Header } from "@/components/header";
 import { Sidebar } from "@/components/sidebar";
+import { SidebarProvider } from "@/components/sidebar/sidebar-context";
 import { auth } from "@/lib/auth";
 
 const inter = Inter({subsets:['latin'],variable:'--font-sans'});
@@ -44,13 +45,15 @@ export default async function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <Header />
-          <div className="flex flex-1">
-            <Sidebar role={session?.user?.role} />
-            <main className="flex-1 ml-64 p-6 overflow-auto">
-              {children}
-            </main>
-          </div>
+          <SidebarProvider>
+            <Header />
+            <div className="flex flex-1">
+              <Sidebar role={session?.user?.role} />
+              <main className="flex-1 md:ml-64 p-6 overflow-auto">
+                {children}
+              </main>
+            </div>
+          </SidebarProvider>
         </ThemeProvider>
       </body>
     </html>
