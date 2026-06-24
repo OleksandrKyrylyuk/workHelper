@@ -286,12 +286,12 @@ export async function downloadAnalysis(
         for await (const chunk of s3Response.Body as AsyncIterable<Uint8Array>) {
             chunks.push(chunk);
         }
-        const text = Buffer.concat(chunks).toString('utf-8');
+        const buffer = Buffer.concat(chunks);
 
         const baseName = record.filename.replace(/\.[^.]+$/, '');
-        res.header('Content-Type', 'text/plain; charset=utf-8');
-        res.header('Content-Disposition', `attachment; filename="${baseName}-analysis.txt"`);
-        return res.send(text);
+        res.header('Content-Type', 'application/pdf');
+        res.header('Content-Disposition', `attachment; filename="${baseName}-analysis.pdf"`);
+        return res.send(buffer);
     } catch (err) {
         req.log.error(err, "Failed to download analysis file");
         return res.code(500).send({ error: "Failed to download analysis file." });

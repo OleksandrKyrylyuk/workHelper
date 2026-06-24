@@ -6,6 +6,10 @@ import { db } from '../db/index.js';
 import { audioFiles } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import type { AnalysisJobData } from './analysis.queue.js';
+import { buildCallAnalysisMessages } from "../promts/analyse.promt.js";
+import {  buildCallAnalysisMessagesBig } from "../promts/analyse-big.promt.js";
+import { generateCallAnalysisPdf } from "../utils/generate-pdf.utils.js";
+import { generateCallAnalysisPdfBig } from "../utils/generate-pdf-big.utils.js";
 
 const connection = { url: process.env.REDIS_URL || 'redis://localhost:6379' };
 
@@ -20,21 +24,6 @@ async function downloadText(s3Key: string): Promise<string> {
         chunks.push(chunk);
     }
     return Buffer.concat(chunks).toString('utf-8');
-}
-
-function buildAnalysisFile(filename: string, tone: string, summary: string): string {
-    const timestamp = new Date().toISOString();
-    return [
-        '=== Аналіз розмови ===',
-        `Файл: ${filename}`,
-        `Згенеровано: ${timestamp}`,
-        '',
-        '--- Тон ---',
-        tone,
-        '',
-        '--- Підсумок ---',
-        summary,
-    ].join('\n');
 }
 
 export function createAnalysisWorker() {
@@ -54,42 +43,25 @@ export function createAnalysisWorker() {
                 const [record] = await db.select({ filename: audioFiles.filename })
                     .from(audioFiles)
                     .where(eq(audioFiles.id, audioId));
-                const filename = record?.filename ?? audioId;
 
                 const transcriptionText = await downloadText(textS3Key);
 
                 const chatResponse = await openai.chat.completions.create({
                     model: 'gpt-4o-mini',
-                    messages: [
-                        {
-                            role: 'system',
-                            content: `You are an expert conversation analyst. Analyze the provided transcription and return a JSON object with exactly two fields:
-- "tone": a concise description of the overall tone of the conversation (e.g., professional, casual, tense, friendly, formal, confrontational)
-- "summary": a brief summary of the main points discussed in the conversation (2-5 sentences)
-
-Always respond in Ukrainian language. Respond with valid JSON only, no markdown or extra text.`,
-                        },
-                        {
-                            role: 'user',
-                            content: `Transcription:\n\n${transcriptionText}`,
-                        },
-                    ],
+                    messages: buildCallAnalysisMessagesBig(transcriptionText),
                     response_format: { type: 'json_object' },
                 });
 
                 const raw = chatResponse.choices[0]?.message?.content ?? '{}';
-                const parsed = JSON.parse(raw) as { tone?: string; summary?: string };
-                const tone = parsed.tone ?? 'Not available';
-                const summary = parsed.summary ?? 'Not available';
 
-                const analysisText = buildAnalysisFile(filename, tone, summary);
-                const analysisKey = `audio-analysis/${audioId}.txt`;
+                const analysisKey = `audio-analysis/${audioId}.pdf`;
+                const analysisText = await generateCallAnalysisPdfBig(JSON.parse(raw));
 
                 await s3.send(new PutObjectCommand({
                     Bucket: process.env.S3_BUCKET_NAME,
                     Key: analysisKey,
-                    Body: Buffer.from(analysisText, 'utf-8'),
-                    ContentType: 'text/plain; charset=utf-8',
+                    Body: analysisText,
+                    ContentType: 'application/pdf',
                 }));
 
                 await db.update(audioFiles)

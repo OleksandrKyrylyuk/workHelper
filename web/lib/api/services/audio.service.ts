@@ -48,7 +48,7 @@ export async function deleteAudio(id: string): Promise<{ success: boolean }> {
 }
 
 /**
- * Download analysis file as a .txt file
+ * Download analysis file as a .pdf file
  */
 export async function downloadAnalysis(id: string, filename: string): Promise<void> {
   const token = await getAuthToken()
@@ -61,14 +61,13 @@ export async function downloadAnalysis(id: string, filename: string): Promise<vo
     throw new Error(data.error || "Failed to download analysis")
   }
 
-  const text = await response.text()
-  const blob = new Blob([text], { type: "text/plain;charset=utf-8" })
+  const blob = await response.blob()
   const url = URL.createObjectURL(blob)
 
   const anchor = document.createElement("a")
   const baseName = filename.replace(/\.[^.]+$/, "")
   anchor.href = url
-  anchor.download = `${baseName}-analysis.txt`
+  anchor.download = `${baseName}-analysis.pdf`
   anchor.click()
   URL.revokeObjectURL(url)
 }
