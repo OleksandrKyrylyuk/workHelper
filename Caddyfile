@@ -1,0 +1,10 @@
+# Replace yourdomain.com with your actual domain name.
+# Caddy automatically obtains and renews SSL certificates via Let's Encrypt.
+
+yourdomain.com, www.yourdomain.com {
+    reverse_proxy web:3000
+}
+
+api.yourdomain.com {
+    reverse_proxy api:3001
+}
