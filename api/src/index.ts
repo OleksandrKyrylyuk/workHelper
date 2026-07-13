@@ -15,7 +15,8 @@ const server = fastify();
 // Enable CORS for web app
 server.register(cors, {
     origin: process.env.CORS_ORIGIN || '*',
-    methods: ['GET', 'POST', 'DELETE']
+    methods: ['GET', 'POST', 'DELETE'],
+    allowedHeaders: ['Authorization', 'Content-Type'],
 });
 
 // Register multipart for file uploads

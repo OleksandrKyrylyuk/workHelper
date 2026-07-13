@@ -1,4 +1,4 @@
-import { Worker } from 'bullmq';
+﻿import { Worker } from 'bullmq';
 import { GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 import OpenAI, { toFile } from 'openai';
 import { execFile } from 'child_process';
@@ -152,47 +152,65 @@ async function transcribeBuffer(
     }))
 }
 
+// Each GPT formatting call covers at most 15 minutes of audio so the output
+// stays well within gpt-4.1-mini's 16 384-token output limit.
+const FORMAT_WINDOW_SECONDS = 15 * 60;
+
+const FORMATTING_PROMPT = `Відформатуй цей транскрипт як читабельну розмову українською мовою.
+
+Правила:
+- Використовуй позначення: Спікер 1, Спікер 2, Спікер 3 тощо.
+- Додавай порожній рядок між репліками різних спікерів.
+- Весь текст має бути українською мовою.
+- Якщо в транскрипті є російські або англійські слова, переклади їх українською, зберігаючи зміст.
+- Не вигадуй нову інформацію.
+- Не додавай пояснень, коментарів або висновків.
+- Виправляй лише очевидні помилки пунктуації, граматики та розпізнавання мовлення.
+- Зберігай початковий зміст розмови.
+- Якщо спікера неможливо визначити, використовуй "Невідомий спікер".
+- Якщо є професійні терміни, пов'язані з каменем, стільницями, акриловим каменем, кварцитом, кварцом, компакт-плитами, слябами, фасадами, мийками, монтажем або продажем — зберігай їх коректно українською.
+- Не скорочуй важливі деталі щодо цін, розмірів, матеріалів, кольорів, брендів, адрес, дат або домовленостей.
+
+Контекст:
+Розмова зазвичай стосується продажу та консультацій щодо каменю: акриловий камінь, кварцит, кварц, натуральний камінь, компакт-плити, сляби, стільниці, кухні, ванні кімнати, монтаж і замовлення.
+
+Транскрипт:
+`;
+
 async function formatTranscription(
     openai: OpenAI,
-    audioID: String,
-    rawText: String
-) {
-    const response = await openai.responses.create({
-        model: "gpt-4.1-mini",
-        input: `
-                Відформатуй цей транскрипт як читабельну розмову українською мовою.
+    audioID: string,
+    segments: TranscriptSegment[],
+): Promise<string> {
+    // Group segments into 15-minute windows and call GPT for each sequentially.
+    // This prevents output-token truncation on long recordings.
+    const windows: TranscriptSegment[][] = [];
+    let current: TranscriptSegment[] = [];
+    let windowEnd = FORMAT_WINDOW_SECONDS;
 
-                Правила:
-                - Використовуй позначення: Спікер 1, Спікер 2, Спікер 3 тощо.
-                - Додавай порожній рядок між репліками різних спікерів.
-                - Весь текст має бути українською мовою.
-                - Якщо в транскрипті є російські або англійські слова, переклади їх українською, зберігаючи зміст.
-                - Не вигадуй нову інформацію.
-                - Не додавай пояснень, коментарів або висновків.
-                - Виправляй лише очевидні помилки пунктуації, граматики та розпізнавання мовлення.
-                - Зберігай початковий зміст розмови.
-                - Якщо спікера неможливо визначити, використовуй "Невідомий спікер".
-                - Якщо є професійні терміни, пов’язані з каменем, стільницями, акриловим каменем, кварцитом, кварцом, компакт-плитами, слябами, фасадами, мийками, монтажем або продажем — зберігай їх коректно українською.
-                - Не скорочуй важливі деталі щодо цін, розмірів, матеріалів, кольорів, брендів, адрес, дат або домовленостей.
+    for (const segment of segments) {
+        if (segment.start >= windowEnd && current.length > 0) {
+            windows.push(current);
+            current = [];
+            windowEnd = (Math.floor(segment.start / FORMAT_WINDOW_SECONDS) + 1) * FORMAT_WINDOW_SECONDS;
+        }
+        current.push(segment);
+    }
+    if (current.length > 0) windows.push(current);
 
-                Контекст:
-                Розмова зазвичай стосується продажу та консультацій щодо каменю: акриловий камінь, кварцит, кварц, натуральний камінь, компакт-плити, сляби, стільниці, кухні, ванні кімнати, монтаж і замовлення.
+    const formattedParts: string[] = [];
+    for (const win of windows) {
+        const rawText = formatTranscriptWithTimestamps(win);
+        const response = await openai.responses.create({
+            model: 'gpt-4.1-mini',
+            max_output_tokens: 16384,
+            input: FORMATTING_PROMPT + rawText,
+        });
+        formattedParts.push(response.output_text);
+    }
 
-                Транскрипт:
-                ${rawText}
-`,
-    });
-
-    const formattedConversation = response.output_text;
-
-    const finalText = `
-        Transcript
-        Audio file: ${audioID}
-        Date: ${new Date().toISOString()}
-
-        ${formattedConversation}
-    `;
-    return finalText;
+    const formattedConversation = formattedParts.join('\n\n');
+    return `Transcript\nAudio file: ${audioID}\nDate: ${new Date().toISOString()}\n\n${formattedConversation}`;
 }
 
 export function createTranscriptionWorker() {
@@ -231,14 +249,13 @@ export function createTranscriptionWorker() {
                     segments = segmentParts.flat().sort((a, b) => a.start - b.start);
                 }
 
-                const fullText = formatTranscriptWithTimestamps(segments);
-                const fortmattedText = await formatTranscription(openai, audioId, fullText);
+                const formattedText = await formatTranscription(openai, audioId, segments);
 
                 const textKey = `audio-texts/${audioId}.txt`;
                 await s3.send(new PutObjectCommand({
                     Bucket: process.env.S3_BUCKET_NAME,
                     Key: textKey,
-                    Body: Buffer.from(fortmattedText, 'utf-8'),
+                    Body: Buffer.from(formattedText, 'utf-8'),
                     ContentType: 'application/pdf; charset=utf-8',
                 }));
 
@@ -261,7 +278,7 @@ export function createTranscriptionWorker() {
         },
         {
             connection,
-            lockDuration: 10 * 60 * 1000, // 10 minutes — allows time for large file download + transcription
+            lockDuration: 90 * 60 * 1000, // 90 minutes — covers download + ffmpeg + Whisper + GPT formatting for long audio
         }
     );
 

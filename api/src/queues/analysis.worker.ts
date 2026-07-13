@@ -1,4 +1,4 @@
-import { Worker } from 'bullmq';
+﻿import { Worker } from 'bullmq';
 import { GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 import OpenAI from 'openai';
 import s3 from '../../config/s3.config.js';
@@ -8,8 +8,10 @@ import { eq } from 'drizzle-orm';
 import type { AnalysisJobData } from './analysis.queue.js';
 import { buildCallAnalysisMessages } from "../promts/analyse.promt.js";
 import {  buildCallAnalysisMessagesBig } from "../promts/analyse-big.promt.js";
+import { buildClientVisitsPlainReportMessagesBig } from "../promts/analyse-summary.promt.js";
 import { generateCallAnalysisPdf } from "../utils/generate-pdf.utils.js";
 import { generateCallAnalysisPdfBig } from "../utils/generate-pdf-big.utils.js";
+import { generateClientVisitsPlainReportPdfBig } from "../utils/generate-summary-pdf.utils.js";
 
 const connection = { url: process.env.REDIS_URL || 'redis://localhost:6379' };
 
@@ -48,14 +50,14 @@ export function createAnalysisWorker() {
 
                 const chatResponse = await openai.chat.completions.create({
                     model: 'gpt-4o-mini',
-                    messages: buildCallAnalysisMessagesBig(transcriptionText),
+                    messages: buildClientVisitsPlainReportMessagesBig(transcriptionText),
                     response_format: { type: 'json_object' },
                 });
 
                 const raw = chatResponse.choices[0]?.message?.content ?? '{}';
 
                 const analysisKey = `audio-analysis/${audioId}.pdf`;
-                const analysisText = await generateCallAnalysisPdfBig(JSON.parse(raw));
+                const analysisText = await generateClientVisitsPlainReportPdfBig(JSON.parse(raw));
 
                 await s3.send(new PutObjectCommand({
                     Bucket: process.env.S3_BUCKET_NAME,
@@ -76,7 +78,7 @@ export function createAnalysisWorker() {
         },
         {
             connection,
-            lockDuration: 5 * 60 * 1000, // 5 minutes
+            lockDuration: 15 * 60 * 1000, // 15 minutes — covers GPT analysis of long transcripts
         }
     );
 
