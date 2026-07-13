@@ -9,6 +9,7 @@ import { createIngestionWorker } from './queues/ingestion.worker.js';
 import { createTranscriptionWorker } from './queues/transcription.worker.js';
 import { createAnalysisWorker } from './queues/analysis.worker.js';
 import { authPlugin } from './plugins/auth.plugin.js';
+import { runMigrations } from './db/migrate.js';
 
 const server = fastify();
 
@@ -35,7 +36,9 @@ server.register(fileRoutes, { prefix: '/files' })
 server.register(chatRoutes, { prefix: '/chat' })
 server.register(audioRoutes, { prefix: '/audio' })
 
-const run =  () => {
+const run = async () => {
+    await runMigrations();
+
     // Start the BullMQ ingestion worker
     createIngestionWorker();
 

@@ -1,9 +1,15 @@
-FROM node:24-alpine AS builder
+# --- Dev stage (used by docker-compose for local dev) ---
+FROM node:24-alpine AS dev
 
 WORKDIR /app
 
 COPY package*.json ./
 RUN npm ci
+
+EXPOSE 3001
+
+# --- Builder stage ---
+FROM dev AS builder
 
 COPY . .
 RUN npm run build
@@ -33,6 +39,7 @@ COPY package*.json ./
 RUN npm ci --omit=dev
 
 COPY --from=builder /app/dist ./dist
+COPY drizzle ./drizzle
 
 EXPOSE 3001
 
