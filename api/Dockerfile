@@ -1,6 +1,17 @@
+FROM node:24-alpine AS builder
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+RUN npm run build
+
+# --- Production image ---
 FROM node:24-alpine
 
-# Install ffmpeg + chromium + dependencies
+# Install ffmpeg + chromium + dependencies for Puppeteer
 RUN apk add --no-cache \
     ffmpeg \
     chromium \
@@ -12,20 +23,18 @@ RUN apk add --no-cache \
     ttf-dejavu \
     fontconfig
 
-# Tell Puppeteer to use Alpine Chromium
+# Tell Puppeteer to use Alpine Chromium instead of bundled one
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
-
-# Optional but recommended: do not download Puppeteer's bundled Chrome
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm install
+RUN npm ci --omit=dev
 
-COPY . .
+COPY --from=builder /app/dist ./dist
 
 EXPOSE 3001
 
-CMD ["npm", "run", "dev"]
+CMD ["npm", "run", "start"]
 
