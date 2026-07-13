@@ -5,8 +5,8 @@ import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 
 const tabs = [
-  { title: "Upload", href: "/audio/upload" },
   { title: "List", href: "/audio/list" },
+  { title: "Upload", href: "/audio/upload" },
 ]
 
 export default function AudioLayout({

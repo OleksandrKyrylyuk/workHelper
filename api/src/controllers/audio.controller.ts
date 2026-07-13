@@ -9,11 +9,21 @@ import { audioFiles } from "../db/schema.js";
 import { eq } from "drizzle-orm";
 import { transcriptionQueue } from "../queues/transcription.queue.js";
 
-export async function uploadAudio(req: FastifyRequest, res: FastifyReply) {
+const VALID_ANALYSIS_TYPES = ["call_analysis", "call_analysis_big", "client_visits"] as const;
+type AnalysisType = typeof VALID_ANALYSIS_TYPES[number];
+
+export async function uploadAudio(req: FastifyRequest<{ Querystring: { analysisType?: string } }>, res: FastifyReply) {
     try {
         // Extract user_id from JWT token (Bearer token uses `sub` claim)
         const user = req.user as { sub?: string; id?: string; userId?: string } | undefined;
         const userId = user?.sub || user?.id || user?.userId || 'unknown';
+
+        const { analysisType } = req.query;
+        if (!analysisType || !VALID_ANALYSIS_TYPES.includes(analysisType as AnalysisType)) {
+            return res.code(400).send({
+                error: `analysisType is required and must be one of: ${VALID_ANALYSIS_TYPES.join(', ')}`
+            });
+        }
 
         const files = req.files();
         let fileProcessed = false;
@@ -64,6 +74,7 @@ export async function uploadAudio(req: FastifyRequest, res: FastifyReply) {
                     contentType: file.mimetype,
                     size: size,
                     status: 'uploaded',
+                    analysisType: analysisType as AnalysisType,
                 }).returning();
 
                 // Enqueue transcription job

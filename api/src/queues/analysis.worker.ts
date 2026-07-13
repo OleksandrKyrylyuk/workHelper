@@ -7,7 +7,7 @@ import { audioFiles } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import type { AnalysisJobData } from './analysis.queue.js';
 import { buildCallAnalysisMessages } from "../promts/analyse.promt.js";
-import {  buildCallAnalysisMessagesBig } from "../promts/analyse-big.promt.js";
+import { buildCallAnalysisMessagesBig } from "../promts/analyse-big.promt.js";
 import { buildClientVisitsPlainReportMessagesBig } from "../promts/analyse-summary.promt.js";
 import { generateCallAnalysisPdf } from "../utils/generate-pdf.utils.js";
 import { generateCallAnalysisPdfBig } from "../utils/generate-pdf-big.utils.js";
@@ -41,28 +41,48 @@ export function createAnalysisWorker() {
                 .where(eq(audioFiles.id, audioId));
 
             try {
-                // Fetch filename from DB
-                const [record] = await db.select({ filename: audioFiles.filename })
+                const [record] = await db.select({ filename: audioFiles.filename, analysisType: audioFiles.analysisType })
                     .from(audioFiles)
                     .where(eq(audioFiles.id, audioId));
 
                 const transcriptionText = await downloadText(textS3Key);
+                const type = record?.analysisType ?? 'client_visits';
 
-                const chatResponse = await openai.chat.completions.create({
-                    model: 'gpt-4o-mini',
-                    messages: buildClientVisitsPlainReportMessagesBig(transcriptionText),
-                    response_format: { type: 'json_object' },
-                });
+                let pdfBuffer: Buffer;
 
-                const raw = chatResponse.choices[0]?.message?.content ?? '{}';
+                if (type === 'call_analysis') {
+                    const chatResponse = await openai.chat.completions.create({
+                        model: 'gpt-4o-mini',
+                        messages: buildCallAnalysisMessages(transcriptionText),
+                        response_format: { type: 'json_object' },
+                    });
+                    const raw = chatResponse.choices[0]?.message?.content ?? '{}';
+                    pdfBuffer = await generateCallAnalysisPdf(JSON.parse(raw));
+                } else if (type === 'call_analysis_big') {
+                    const chatResponse = await openai.chat.completions.create({
+                        model: 'gpt-4o-mini',
+                        messages: buildCallAnalysisMessagesBig(transcriptionText),
+                        response_format: { type: 'json_object' },
+                    });
+                    const raw = chatResponse.choices[0]?.message?.content ?? '{}';
+                    pdfBuffer = await generateCallAnalysisPdfBig(JSON.parse(raw));
+                } else {
+                    // client_visits (default)
+                    const chatResponse = await openai.chat.completions.create({
+                        model: 'gpt-4o-mini',
+                        messages: buildClientVisitsPlainReportMessagesBig(transcriptionText),
+                        response_format: { type: 'json_object' },
+                    });
+                    const raw = chatResponse.choices[0]?.message?.content ?? '{}';
+                    pdfBuffer = await generateClientVisitsPlainReportPdfBig(JSON.parse(raw));
+                }
 
                 const analysisKey = `audio-analysis/${audioId}.pdf`;
-                const analysisText = await generateClientVisitsPlainReportPdfBig(JSON.parse(raw));
 
                 await s3.send(new PutObjectCommand({
                     Bucket: process.env.S3_BUCKET_NAME,
                     Key: analysisKey,
-                    Body: analysisText,
+                    Body: pdfBuffer,
                     ContentType: 'application/pdf',
                 }));
 

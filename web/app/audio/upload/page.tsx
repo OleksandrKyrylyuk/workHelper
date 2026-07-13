@@ -4,14 +4,23 @@ import * as React from "react"
 import { Upload as UploadIcon, X, Music } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { cn } from "@/lib/utils"
-import { uploadAudio } from "@/lib/api/services/audio.service"
+import { uploadAudio, type AnalysisType, ANALYSIS_TYPE_LABELS } from "@/lib/api/services/audio.service"
 import { ApiError } from "@/lib/api/client"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Progress } from "@/components/ui/progress"
 
 export default function AudioUploadPage() {
   const [file, setFile] = React.useState<File | null>(null)
+  const [analysisType, setAnalysisType] = React.useState<AnalysisType | "">("")
   const [isDragging, setIsDragging] = React.useState(false)
   const [uploading, setUploading] = React.useState(false)
   const [progress, setProgress] = React.useState(0)
@@ -76,6 +85,11 @@ export default function AudioUploadPage() {
       return
     }
 
+    if (!analysisType) {
+      setMessage({ type: "error", text: "Please select an analysis type" })
+      return
+    }
+
     setUploading(true)
     setProgress(0)
     setMessage(null)
@@ -83,7 +97,7 @@ export default function AudioUploadPage() {
     try {
       setProgress(30)
       
-      const data = await uploadAudio(file)
+      await uploadAudio(file, analysisType)
       
       setProgress(100)
       setMessage({ type: "success", text: "Audio file uploaded successfully" })
@@ -120,6 +134,28 @@ export default function AudioUploadPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="analysis-type">
+              Analysis Type <span className="text-destructive">*</span>
+            </Label>
+            <Select
+              value={analysisType}
+              onValueChange={(value) => setAnalysisType(value as AnalysisType)}
+              disabled={uploading}
+            >
+              <SelectTrigger id="analysis-type">
+                <SelectValue placeholder="Select analysis type…" />
+              </SelectTrigger>
+              <SelectContent>
+                {(Object.entries(ANALYSIS_TYPE_LABELS) as [AnalysisType, string][]).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
@@ -195,7 +231,7 @@ export default function AudioUploadPage() {
           <div className="flex gap-2">
             <Button
               onClick={handleUpload}
-              disabled={!file || uploading}
+              disabled={!file || !analysisType || uploading}
               className="flex-1"
             >
               <UploadIcon className="mr-2 h-4 w-4" />

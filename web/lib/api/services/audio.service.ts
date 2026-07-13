@@ -4,6 +4,14 @@
  */
 import { apiUpload, apiGet, apiDelete, API_BASE_URL, getAuthToken } from "../client"
 
+export type AnalysisType = "call_analysis" | "call_analysis_big" | "client_visits"
+
+export const ANALYSIS_TYPE_LABELS: Record<AnalysisType, string> = {
+  call_analysis: "Call Analysis (Basic)",
+  call_analysis_big: "Call Analysis (Extended)",
+  client_visits: "Client Visits Report",
+}
+
 export interface AudioInfo {
   id: string
   filename: string
@@ -25,12 +33,12 @@ export interface AudioListResponse {
 }
 
 /**
- * Upload a single audio file
+ * Upload a single audio file with the selected analysis type
  */
-export async function uploadAudio(file: File): Promise<AudioUploadResponse> {
+export async function uploadAudio(file: File, analysisType: AnalysisType): Promise<AudioUploadResponse> {
   const formData = new FormData()
   formData.append('file', file)
-  return apiUpload<AudioUploadResponse>("/audio/upload", formData)
+  return apiUpload<AudioUploadResponse>(`/audio/upload?analysisType=${encodeURIComponent(analysisType)}`, formData)
 }
 
 /**
@@ -68,28 +76,6 @@ export async function downloadAnalysis(id: string, filename: string): Promise<vo
   const baseName = filename.replace(/\.[^.]+$/, "")
   anchor.href = url
   anchor.download = `${baseName}-analysis.pdf`
-  anchor.click()
-  URL.revokeObjectURL(url)
-}
-export async function downloadAudioText(id: string, filename: string): Promise<void> {
-  const token = await getAuthToken()
-  const response = await fetch(`${API_BASE_URL}/audio/${id}/download-text`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  })
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => ({})) as { error?: string }
-    throw new Error(data.error || "Failed to download transcription")
-  }
-
-  const text = await response.text()
-  const blob = new Blob([text], { type: "text/plain;charset=utf-8" })
-  const url = URL.createObjectURL(blob)
-
-  const anchor = document.createElement("a")
-  const baseName = filename.replace(/\.[^.]+$/, "")
-  anchor.href = url
-  anchor.download = `${baseName}.txt`
   anchor.click()
   URL.revokeObjectURL(url)
 }

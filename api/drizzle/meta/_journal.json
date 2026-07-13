@@ -36,6 +36,13 @@
       "when": 1782045775074,
       "tag": "0004_add_deleted_at_to_users",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1783956000000,
+      "tag": "0005_add_analysis_type",
+      "breakpoints": true
     }
   ]
 }
