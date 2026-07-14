@@ -18,7 +18,34 @@ import {formatTranscriptWithTimestamps, parseCsvLine} from '../utils/time.utils.
 import type { TranscriptSegment } from '../utils/time.utils.js';
 import {isAbsolute} from "pathe";
 
-const connection = { url: process.env.REDIS_URL || 'redis://localhost:6379' };
+async function withRetry<T>(fn: () => Promise<T>, maxAttempts = 4): Promise<T> {
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+            return await fn();
+        } catch (err: unknown) {
+            const isTransient =
+                err instanceof OpenAI.APIError &&
+                (err.status === 429 || (err.status != null && err.status >= 500));
+            if (!isTransient || attempt === maxAttempts) throw err;
+
+            const retryAfterHeader =
+                err.headers instanceof Headers
+                    ? err.headers.get('retry-after')
+                    : typeof err.headers === 'object' && err.headers !== null
+                        ? (err.headers as Record<string, string>)['retry-after']
+                        : null;
+            const delayMs = retryAfterHeader
+                ? Math.min(Number(retryAfterHeader) * 1000, 120_000)
+                : Math.min(1_000 * 2 ** (attempt - 1), 60_000);
+
+            console.warn(`OpenAI ${err.status} on attempt ${attempt}/${maxAttempts}, retrying in ${delayMs}ms`);
+            await new Promise(resolve => setTimeout(resolve, delayMs));
+        }
+    }
+    throw new Error('unreachable');
+}
+
+const connection= { url: process.env.REDIS_URL || 'redis://localhost:6379' };
 const execFileAsync = promisify(execFile);
 
 type AudioChunk = {
@@ -136,12 +163,12 @@ async function transcribeBuffer(
     offsetSeconds = 0
 ): Promise<TranscriptSegment[]> {
     const file = await toFile(buffer, `audio.${ext}`, { type: contentType });
-    const response = await openai.audio.transcriptions.create({
+    const response = await withRetry(() => openai.audio.transcriptions.create({
         file,
         model: 'whisper-1',
         response_format: 'verbose_json',
         timestamp_granularities: ['segment'],
-    });
+    }));
 
     const segments = response.segments ?? [];
 
@@ -201,11 +228,11 @@ async function formatTranscription(
     const formattedParts: string[] = [];
     for (const win of windows) {
         const rawText = formatTranscriptWithTimestamps(win);
-        const response = await openai.responses.create({
+        const response = await withRetry(() => openai.responses.create({
             model: 'gpt-4.1-mini',
             max_output_tokens: 16384,
             input: FORMATTING_PROMPT + rawText,
-        });
+        }));
         formattedParts.push(response.output_text);
     }
 

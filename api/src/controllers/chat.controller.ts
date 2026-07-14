@@ -28,9 +28,12 @@ export async function chat(req: FastifyRequest, res: FastifyReply): Promise<void
         req.log.warn({ err }, 'queryDocuments failed — proceeding without context');
     }
 
-    const systemPrompt = contextChunks.length > 0
-        ? `You are a helpful assistant. Use the following context from the user's documents to answer questions accurately. If the answer is not in the context, say so honestly.\n\nContext:\n${contextChunks.map((t, i) => `[${i + 1}] ${t}`).join('\n\n')}`
-        : 'You are a helpful assistant. No relevant documents were found for this query — answer based on your general knowledge.';
+    if (contextChunks.length === 0) {
+        res.code(200).send({ error: "I can only answer questions based on the documents in my knowledge base. I don't have relevant information to answer your question." });
+        return;
+    }
+
+    const systemPrompt = `You are a helpful assistant. Answer questions ONLY using the context provided below. Do NOT use any outside knowledge. If the answer is not present in the context, say that you don't have information about it.\n\nContext:\n${contextChunks.map((t, i) => `[${i + 1}] ${t}`).join('\n\n')}`;
 
     const llm = new OpenAI({
         model: 'gpt-4o-mini',
