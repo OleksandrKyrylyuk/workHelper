@@ -3,6 +3,20 @@ FROM node:24-alpine AS dev
 
 WORKDIR /app
 
+RUN apk add --no-cache \
+    ffmpeg \
+    chromium \
+    nss \
+    freetype \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont \
+    ttf-dejavu \
+    fontconfig
+
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+ENV PUPPETEER_SKIP_DOWNLOAD=true
+
 COPY package*.json ./
 RUN npm ci
 
