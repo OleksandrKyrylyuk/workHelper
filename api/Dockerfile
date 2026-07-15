@@ -12,7 +12,8 @@ RUN apk add --no-cache \
     ca-certificates \
     ttf-freefont \
     ttf-dejavu \
-    fontconfig
+    fontconfig \
+    poppler-utils
 
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 ENV PUPPETEER_SKIP_DOWNLOAD=true
@@ -41,7 +42,8 @@ RUN apk add --no-cache \
     ca-certificates \
     ttf-freefont \
     ttf-dejavu \
-    fontconfig
+    fontconfig \
+    poppler-utils
 
 # Tell Puppeteer to use Alpine Chromium instead of bundled one
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser

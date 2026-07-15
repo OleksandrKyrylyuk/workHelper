@@ -4,8 +4,8 @@ import s3 from '../../config/s3.config.js';
 import { db } from '../db/index.js';
 import { documents } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
-import { extractText } from '../utils/parser.utils.js';
-import { indexDocument } from '../services/rag.service.js';
+import { extractChunksForRag } from '../utils/new-parser.utils.js';
+import { indexDocumentChunks } from '../services/rag.service.js';
 import type { IngestionJobData } from './ingestion.queue.js';
 
 const connection = { url: process.env.REDIS_URL || 'redis://localhost:6379' };
@@ -45,11 +45,16 @@ export function createIngestionWorker() {
                 // Download from S3
                 const buffer = await downloadFromS3(s3Key);
 
-                // Extract text
-                const text = await extractText(buffer, mimeType);
+                // Extract text + images per page
+                const chunks = await extractChunksForRag({
+                    buffer,
+                    mimeType,
+                    documentId,
+                    originalS3Key: s3Key,
+                });
 
-                // Chunk, embed and store in Qdrant
-                await indexDocument(documentId, text);
+                // Embed and store chunks in Qdrant
+                await indexDocumentChunks(documentId, chunks);
 
                 // Mark as indexed
                 await db.update(documents)

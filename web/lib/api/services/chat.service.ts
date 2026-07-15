@@ -7,12 +7,19 @@ export interface ChatMessage {
   content: string
 }
 
+export interface ChatSource {
+  documentId: string
+  pageNumber?: number
+  imageUrl?: string
+}
+
 export async function streamChat(
   message: string,
   history: ChatMessage[],
   onChunk: (text: string) => void,
   onDone: () => void,
-  onError: (error: string) => void
+  onError: (error: string) => void,
+  onSources?: (sources: ChatSource[]) => void
 ): Promise<void> {
   let response: Response
   try {
@@ -63,13 +70,16 @@ export async function streamChat(
           return
         }
         try {
-          const parsed = JSON.parse(payload) as { text?: string; error?: string }
+          const parsed = JSON.parse(payload) as { text?: string; error?: string; sources?: ChatSource[] }
           if (parsed.error) {
             onError(parsed.error)
             return
           }
           if (parsed.text) {
             onChunk(parsed.text)
+          }
+          if (parsed.sources && onSources) {
+            onSources(parsed.sources)
           }
         } catch {
           // ignore malformed frames

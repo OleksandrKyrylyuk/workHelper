@@ -59,6 +59,11 @@ export default function ChatPage() {
             )
           )
           setStreaming(false)
+        },
+        (sources) => {
+          setMessages((prev) =>
+            prev.map((m) => (m.id === assistantId ? { ...m, sources } : m))
+          )
         }
       )
     } catch (err) {
@@ -74,7 +79,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto flex flex-col h-[calc(100vh-8rem)]">
+    <div className="max-w-3xl mx-auto flex flex-col">
       <div className="mb-4 shrink-0">
         <h1 className="text-2xl font-bold text-foreground">Chat</h1>
         <p className="text-sm text-muted-foreground">Ask questions about your uploaded documents</p>
