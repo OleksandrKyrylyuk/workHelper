@@ -42,6 +42,7 @@ export async function createSession(user: AuthUser): Promise<void> {
     sameSite: 'lax',
     maxAge: MAX_AGE,
     path: '/',
+    domain: '.mwh365.com'
   })
 }
 

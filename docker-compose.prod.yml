@@ -27,6 +27,7 @@ services:
     environment:
       NODE_ENV: production
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+      AUTH_SECRET: ${AUTH_SECRET}
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
     depends_on:
       - api
@@ -48,6 +49,12 @@ services:
       REDIS_URL: redis://redis:6379
       QDRANT_URL: http://qdrant:6333
       OPENAI_API_KEY: ${OPENAI_API_KEY}
+      AWS_REGION: ${AWS_REGION}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      S3_BUCKET_NAME: ${S3_BUCKET_NAME}
+      AUTH_SECRET: ${AUTH_SECRET}
+      CORS_ORIGIN: ${CORS_ORIGIN}
     depends_on:
       - postgres
       - redis
@@ -83,6 +90,8 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - workhelper
+    ports:
+      - "127.0.0.1:5432:5432"
 
 volumes:
   postgres_data:

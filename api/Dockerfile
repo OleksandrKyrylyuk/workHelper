@@ -56,6 +56,7 @@ RUN npm ci --omit=dev
 
 COPY --from=builder /app/dist ./dist
 COPY drizzle ./drizzle
+COPY drizzle.config.ts ./drizzle.config.ts
 
 EXPOSE 3001
 
