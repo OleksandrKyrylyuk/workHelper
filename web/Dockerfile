@@ -4,7 +4,7 @@ FROM node:24-alpine AS dev
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm ci
+RUN npm install -g npm@latest && npm ci
 
 EXPOSE 3000
 ENV PORT=3000
