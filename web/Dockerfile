@@ -27,8 +27,6 @@ WORKDIR /app
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
-COPY drizzle ./drizzle
-COPY drizzle.config.ts ./drizzle.config.ts
 
 EXPOSE 3000
 ENV PORT=3000
