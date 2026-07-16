@@ -1,1 +1,1 @@
-ALTER TABLE "audio_files" ADD COLUMN "text_s3_key" text;
+ALTER TABLE "audio_files" ADD COLUMN IF NOT EXISTS "text_s3_key" text;
