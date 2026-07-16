@@ -1,7 +1,11 @@
 # Replace yourdomain.com with your actual domain name.
 # Caddy automatically obtains and renews SSL certificates via Let's Encrypt.
 
-mwh365.com, www.mwh365.com {
+www.mwh365.com {
+    redir https://mwh365.com{uri} permanent
+}
+
+mwh365.com {
     reverse_proxy web:3000
 }
 
