@@ -14,16 +14,10 @@ import { runMigrations } from './db/migrate.js';
 const server = fastify();
 
 // Enable CORS for web app
-const corsOrigin = process.env.CORS_ORIGIN
-    ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
-    : '*';
-
 server.register(cors, {
-    origin: corsOrigin,
-    methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
+    origin: process.env.CORS_ORIGIN || '*',
+    methods: ['GET', 'POST', 'DELETE'],
     allowedHeaders: ['Authorization', 'Content-Type'],
-    preflightContinue: false,
-    optionsSuccessStatus: 204,
 });
 
 // Register multipart for file uploads
@@ -60,7 +54,6 @@ const run = async () => {
             process.exit(1)
         }
         console.log(`Server listening at ${address}`)
-        console.log(`CORS allowed origins:`, corsOrigin)
     })
 };
 
