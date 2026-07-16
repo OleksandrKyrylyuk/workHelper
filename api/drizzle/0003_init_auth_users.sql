@@ -1,4 +1,4 @@
-CREATE TABLE "auth_users" (
+CREATE TABLE IF NOT EXISTS "auth_users" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"email" text NOT NULL,
 	"name" text,
